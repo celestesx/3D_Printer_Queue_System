@@ -1,0 +1,409 @@
+import java.util.ArrayList;
+import java.util.Scanner;
+
+/**
+ * This class describes the StageB object which acts as a user interface to
+ * take inputs from the user and displays outputs to them.
+ */
+public class StageB {
+    /**
+     * This is the main method of the program used to initialise a new StageB
+     * object. It has printQueue as a reference.
+     * @param args To obtain command line arguments passed during program
+     *             execution.
+     */
+    public static void main(String[] args) {
+        PrintQueue printQueue= new PrintQueue(getQueueSize());
+        StageB obj = new StageB(printQueue);
+    }
+
+    /**
+     * This is the class constructor of the StageB class. It contains the
+     * following methods and instructions for the operation of this program.
+     * @param printQueue PrintQueue object which is an array.
+     */
+    public StageB(PrintQueue printQueue) {
+        String mainMenuChoice;
+        System.out.println("\nWelcome to BitForge Print Queue Scheduler.");
+        /*
+         * This do-while loop allows the user to choose options available
+         * until they choose to exit the program.
+         */
+        do {
+            mainMenuChoice = this.getMenuOption();
+            if (mainMenuChoice.equalsIgnoreCase("A")) {
+                this.addNewJobToQueue(printQueue);
+            } else if (mainMenuChoice.equalsIgnoreCase("B")) {
+                this.displayAllDetails(printQueue);
+            } else if (mainMenuChoice.equalsIgnoreCase("C")) {
+                this.getQueueSearchInput(printQueue);
+            } else if (mainMenuChoice.equalsIgnoreCase("D")) {
+                this.dequeuePrintJob(printQueue);
+            } else {
+                System.out.println("\nGoodbye.");
+            }
+        } while (!mainMenuChoice.equalsIgnoreCase("E"));
+    }
+
+    /**
+     * Method to display the menu and return a menu choice as entered by the
+     * user.
+     * @return String userChoice as entered by the user.
+     */
+    private String getMenuOption() {
+        String userChoice;
+        String mainMenu = "\nMain Menu\n";
+        mainMenu += "=======================\n";
+        mainMenu += "A) Add New Job to Queue\n";
+        mainMenu += "B) List All Jobs\n";
+        mainMenu += "C) Display Selected Job\n";
+        mainMenu += "D) Dequeue Job\n";
+        mainMenu += "E) Exit\n";
+        mainMenu += "Your Choice: ";
+        userChoice = getNonEmptyString(mainMenu);
+        /*
+         * While loop to check if the user has only entered the allowable
+         * responses.
+         */
+        while (!userChoice.equalsIgnoreCase("A") &&
+                !userChoice.equalsIgnoreCase("B") &&
+                !userChoice.equalsIgnoreCase("C") &&
+                !userChoice.equalsIgnoreCase("D") &&
+                !userChoice.equalsIgnoreCase("E")) {
+            userChoice = getNonEmptyString("No such option, Reenter: ");
+        }
+        return userChoice;
+    }
+
+    /**
+     * Method to obtain the size of the queue as needed by the user.
+     * @return integer of queue size which will be used to size the array.
+     */
+    private static int getQueueSize() {
+        int queueSize;
+        String queuePrompt = "Please enter the queue size: ";
+        queueSize = getIntegerInput(queuePrompt);
+        /*
+         * While loop forces the user to enter a value of more than 1.
+         */
+        while (queueSize < 1) {
+            queueSize = getIntegerInput("The queue must be more than 1. " +
+                    "Re-enter: ");
+        }
+        return queueSize;
+    }
+
+    /**
+     * Method to obtain responses from the user and to add use those variable
+     * to create a new PrintJob object that will be added to the array.
+     * @param printQueue PrintQueue object which is an array.
+     */
+    private void addNewJobToQueue(PrintQueue printQueue) {
+        /* The variables below store the responses as solicited from the user */
+        String customerID;
+        String description;
+        int printQuantity;
+        double volumeInCubicMetres;
+        String plasticType;
+        String userPostProcessingChoice;
+        ArrayList<String> postProcessing;
+        /*
+         * The printJob variable is a PrintJob object which will be created
+         * with the responses of the user.
+         */
+        PrintJob printJob = null;
+        String details = "\nEntering Job Details\n";
+        details += "=========================";
+        /* This variable stores the boolean value of if the queue is full */
+        boolean printQueueFull = printQueue.checkIfQueueIsFull();
+        /*
+         * This if-else statement prevents the program from taking inputs from
+         * the user if the queue is full.
+         */
+        if (printQueueFull == false) {
+            System.out.println(details);
+            customerID = getNonEmptyString("Enter customerID: ");
+            description = getNonEmptyString("Enter job description: ");
+            printQuantity = getIntegerInput("Enter quantity: ");
+            volumeInCubicMetres = getDecimalInput("Enter the volume(mm3): ");
+            plasticType = this.getPlasticType();
+            /*
+             * This if-else statement checks if the plasticType chosen is
+             * Acrylic as this plastic has different requirements (compulsory
+             * post-processing).
+             */
+            if (plasticType.equalsIgnoreCase("Acrylic")) {
+                userPostProcessingChoice = "Y";
+            } else {
+                userPostProcessingChoice = getYesOrNo("Is post-processing " +
+                        "required? (Y/N): ");
+            }
+            /*
+             * This if-else if statement checks the inputs entered by the
+             * user if they result in an ordinary PrintJob object or
+             * ProcessedPrintJob object and initialises the PrintJob object
+             * as appropriate.
+             */
+            if (userPostProcessingChoice.equalsIgnoreCase("Y")) {
+                postProcessing = postProcessingChoices();
+                printJob = new ProcessedPrintJob(customerID, printQuantity,
+                        volumeInCubicMetres, description, plasticType,
+                        postProcessing);
+            } else if (userPostProcessingChoice.equalsIgnoreCase("N")) {
+                printJob = new PrintJob(customerID, printQuantity,
+                        volumeInCubicMetres, description, plasticType);
+            }
+            printQueue.addToQueue(printJob);
+            System.out.println("\nJob Added\n");
+        } else {
+            System.out.println("\nThe queue is full.\n");
+        }
+    }
+
+    /**
+     * This method obtains input from the user regarding post-processing
+     * choices.
+     * @return ArrayList of String type containing post-processing choices.
+     */
+    private ArrayList<String> postProcessingChoices() {
+        String userChoice;
+        String uvCuring = "Is UV curing required ($";
+        uvCuring += ProcessedPrintJob.uvCuring + ")?(Y/N): ";
+        String uvProtectiveCoat = "Is UV protective coating required ($";
+        uvProtectiveCoat += ProcessedPrintJob.uvProtectiveCoating + ")?(Y/N): ";
+        String polishing = "Is polishing required ($";
+        polishing += ProcessedPrintJob.polishing + ")?(Y/N): ";
+        /* The ArrayList is instantiated here */
+        ArrayList<String> postProcessingChoices = new ArrayList<>();
+        /*
+         * This do-while loop ensures the user has chosen at least one
+         * post-processing choice.
+         */
+        do {
+            /*
+             * These if statements obtain inputs from the user on the
+             * post-processing choices. A string that corresponds to the
+             * choice is added to the ArrayList.
+             */
+            userChoice = getYesOrNo(uvCuring);
+            if (userChoice.equalsIgnoreCase("Y")) {
+                postProcessingChoices.add("UV Curing");
+            }
+            userChoice = getYesOrNo(uvProtectiveCoat);
+            if (userChoice.equalsIgnoreCase("Y")) {
+                postProcessingChoices.add("UV Protective Coating");
+            }
+            userChoice = getYesOrNo(polishing);
+            if (userChoice.equalsIgnoreCase("Y")) {
+                postProcessingChoices.add("Polishing");
+            }
+            if (postProcessingChoices.size() == 0) {
+                System.out.println("\nYou must have at least one " +
+                        "post-processing.\n");
+            }
+        } while (postProcessingChoices.size() == 0);
+        return postProcessingChoices;
+    }
+
+    /**
+     * This method displays the plastic type menu to the user and solicits a
+     * response on their choice.
+     * @return String plasticType which stores the choice of plastic for the
+     * print job.
+     */
+    private String getPlasticType() {
+        String plasticTypeChoice;
+        String plasticType = "";
+        String plasticTypeMenu = "Choose the plastic type\n";
+        plasticTypeMenu += "========================\n";
+        plasticTypeMenu += "A) PLA ($" + PrintJob.rawPricePLA + " per mm3)\n";
+        plasticTypeMenu += "B) ABS ($" + PrintJob.rawPriceABS + " per mm3)\n";
+        plasticTypeMenu += "C) Nylon ($" + PrintJob.rawPriceNylon + " per mm3)";
+        plasticTypeMenu += "\nD) Acrylic ($"+ ProcessedPrintJob.rawPriceAcrylic;
+        plasticTypeMenu += " per mm3) (Compulsory Post-Processing)\n";
+        plasticTypeMenu += "Your choice: ";
+        /* This while loop ensures only allowable responses can be entered. */
+        plasticTypeChoice = getNonEmptyString(plasticTypeMenu);
+        while (!plasticTypeChoice.equalsIgnoreCase("A") &&
+                !plasticTypeChoice.equalsIgnoreCase("B") &&
+                !plasticTypeChoice.equalsIgnoreCase("C") &&
+                !plasticTypeChoice.equalsIgnoreCase("D")) {
+            plasticTypeChoice = getNonEmptyString("No such option, " +
+                    "Re-enter: ");
+        }
+        /*
+         * This if-else if statement assigns the corresponding string to the
+         * variable depending on the user input.
+         */
+        if (plasticTypeChoice.equalsIgnoreCase("A")) {
+            plasticType = "PLA";
+        } else if (plasticTypeChoice.equalsIgnoreCase("B")) {
+            plasticType = "ABS";
+        } else if (plasticTypeChoice.equalsIgnoreCase("C")) {
+            plasticType = "Nylon";
+        } else if (plasticTypeChoice.equalsIgnoreCase("D")) {
+            plasticType = "Acrylic";
+        }
+        return plasticType;
+    }
+
+    /**
+     * This method displays the details of all the print jobs.
+     * @param printQueue PrintQueue object which is an array.
+     */
+    private void displayAllDetails(PrintQueue printQueue) {
+        boolean empty;
+        empty = printQueue.checkIfQueueIsEmpty();
+        /*
+         * This if-else statements check if the queue is empty. If not, calls
+         * a method from PrintQueue to display all the details of print jobs.
+         */
+        if (empty != true) {
+            printQueue.printDetails();
+        } else {
+            System.out.println("\nThe queue is empty.\n");
+        }
+    }
+
+    /**
+     * This method obtains the printID as entered by the user to search the
+     * queue if the printID exists.
+     * @param printQueue PrintQueue object which is an array.
+     */
+    private void getQueueSearchInput(PrintQueue printQueue) {
+        boolean empty, found;
+        int searchInput;
+        empty = printQueue.checkIfQueueIsEmpty();
+        /*
+         * If-else statement to check if the queue is empty. If so, informs
+         * the user that they can't search.
+         */
+        if (empty != true) {
+            searchInput= getIntegerInput("Enter the printID to search: " );
+            found = printQueue.searchPrintJob(searchInput);
+            /*
+             * If the printID entered does not exist in the queue, the user
+             * is informed.
+             */
+            if (found == false) {
+                System.out.println("\nPrint ID is not found.\n");
+            }
+        } else {
+            System.out.println("\nThe queue is empty.\n");
+        }
+    }
+
+    /**
+     * This method 'removes' the first PrintJob in the queue by simulating a
+     * first-in, first-out queue.
+     * @param printQueue PrintQueue object which is an array.
+     */
+    private void dequeuePrintJob(PrintQueue printQueue) {
+        boolean empty;
+        empty = printQueue.checkIfQueueIsEmpty();
+        /*
+         * This if else statement checks if the queue is empty and informs
+         * the user if it is.
+         */
+        if (empty != true) {
+            printQueue.removeFromQueue();
+            System.out.println("\nRemoved the next print job.\n");
+        } else {
+            System.out.println("\nThe queue is empty. Nothing left to " +
+                    "remove.\n");
+        }
+    }
+
+    /**
+     * This method functions as an input taking function to ensure the user had
+     * not entered an empty string.
+     * @param prompt String type prompt in the form of query or menu.
+     * @return String user input.
+     */
+    private static String getNonEmptyString(String prompt) {
+        Scanner scanner = new Scanner(System.in);
+        String userInput;
+        System.out.print(prompt);
+        userInput = scanner.nextLine();
+
+        /* While loop to obtain non-empty String */
+        while (userInput.equals("")) {
+            System.out.print("Input cannot be empty. Re-enter: ");
+            userInput = scanner.nextLine();
+        }
+        return userInput;
+    }
+
+    /**
+     * This method functions as an input taking function to ensure the user
+     * had entered an integer data type.
+     * @param prompt String type prompt in the form of query or menu.
+     * @return integer user input.
+     */
+    private static int getIntegerInput(String prompt) {
+        int value = 0;
+        boolean valid = false;
+        /*
+         * This do-while loop repeatedly prompts the user to enter a value of
+         * integer type.
+         */
+        do {
+            /*
+             * Try-catch statement to catch and handle exception if user enters
+             * anything other than an integer.
+             */
+            try {
+                value = Integer.parseInt(getNonEmptyString(prompt));
+                valid = true;
+            } catch (NumberFormatException e) {
+                System.out.println("Input must be an integer value.");
+            }
+        } while (!valid);
+        return value;
+    }
+
+    /**
+     * This method functions as an input taking function to ensure the user
+     * had entered a double data type.
+     * @param prompt String type prompt in the form of query or menu.
+     * @return double user input.
+     */
+    private static double getDecimalInput(String prompt) {
+        double value = 0;
+        boolean valid = false;
+        /*
+         * This do-while loop repeatedly prompts the user to enter a value of
+         * double data type.
+         */
+        do {
+            /*
+             * Try-catch statement to catch and handle exception if user enters
+             * anything other than an integer or double.
+             */
+            try {
+                value = Double.parseDouble(getNonEmptyString(prompt));
+                valid = true;
+            } catch (NumberFormatException e) {
+                System.out.println("Input must be a decimal value.");
+            }
+        } while (!valid);
+        return value;
+    }
+
+    /**
+     * This method obtains a Y or N string from the user.
+     * @param prompt String type prompt in the form of query or menu.
+     * @return String Y or N.
+     */
+    private static String getYesOrNo(String prompt) {
+        String userInput = getNonEmptyString(prompt);
+        /*
+         * This while loop repeatedly prompts the user to only enter Y or N
+         */
+        while (!userInput.equalsIgnoreCase("Y") &&
+                !userInput.equalsIgnoreCase("N")) {
+            userInput = getNonEmptyString("Invalid. Re-enter: ");
+        }
+        return userInput;
+    }
+}
